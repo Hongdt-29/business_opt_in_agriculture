@@ -29,3 +29,5 @@ memoized-property
 termcolor
 
 streamlit
+rasterio
+folium
