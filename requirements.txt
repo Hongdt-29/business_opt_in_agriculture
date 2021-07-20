@@ -31,4 +31,4 @@ termcolor
 streamlit
 rasterio
 folium
-folium_static
+streamlit_folium
