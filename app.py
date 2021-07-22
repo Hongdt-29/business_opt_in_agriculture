@@ -1,40 +1,46 @@
 import streamlit as st
-from PIL import Image
+# from PIL import Image
 from rasterio.io import MemoryFile
 import rasterio
 import numpy as np
 import pandas as pd
 import joblib
-import base64
+# import base64
+import math
 
 from streamlit_folium import folium_static
 import folium
-import os
+# import os
 
 import rasterio.features
 import rasterio.warp
-
+# from sklearn.preprocessing import RobustScaler1
 
 st.title('Rice and Sugarcane Classifier')
 
 def main():
-    file_uploaded = st.file_uploader("Choose File", type=["tif","png"])
+    file_uploaded = st.file_uploader("Choose File", type=["tif","_all_bands_"])
     class_btn = st.button("Classify")
     if file_uploaded is not None:
         with MemoryFile(file_uploaded) as memfile:
             with memfile.open() as img:
                 geo_json = get_geo_json(img)
-                pre_image = image_preprocessing(img)
-                img.close()
+                pre_image = image_preprocessing(img,file_uploaded)
+                st.write(pre_image)
                 if class_btn:
                     with st.spinner('Model working....'):
                         predictions = predict(pre_image)[0]
                         st.success("Predicted Class: " + predictions)
-                        # st.text("Predicted Class: " + predictions)
-                display_map(geo_json)
+                display_map(geo_json,img)
+                img.close()
 
-def image_preprocessing(img):
+def image_preprocessing(img,file_uploaded):
     X = []
+    filename = file_uploaded.name
+    file_id, date = filename.split('_all_bands_')
+    date = date.replace('.tif','')
+
+
     # Compute ndvi mean, median, std
     ndvi = (img.read(8)-img.read(4))/(img.read(8) + img.read(4))
     ndvi_ = np.nan_to_num(ndvi, nan=-1)
@@ -75,28 +81,50 @@ def image_preprocessing(img):
     bc3_median= np.median(bc3_values)
     bc3_std= np.std(bc3_values)
 
+    # Compute Cb4 mean, median, std
+    band_combo_4 = img.read(12) + img.read(8) + img.read(4)
+    bc4_ = np.nan_to_num(band_combo_4, nan=-1)
+    bc4_values =np.array([x for x in bc4_.flatten() if x != -1])
+    bc4_mean= bc4_values.mean()
+    bc4_median= np.median(bc4_values)
+    bc4_std= np.std(bc4_values)
 
-    b_dict = {
+    # Compute Cb5 mean, median, std
+    band_combo_5 = img.read(4) + img.read(3) + img.read(2)
+    bc5_ = np.nan_to_num(band_combo_5, nan=-1)
+    bc5_values =np.array([x for x in bc5_.flatten() if x != -1])
+    bc5_mean= bc5_values.mean()
+    bc5_median= np.median(bc5_values)
+    bc5_std= np.std(bc5_values)
+
+    b_dict = {'date':date,\
               'ndvi_mean': ndvi_mean,'ndvi_median': ndvi_median,'ndvi_std': ndvi_std,\
               'mi_mean': mi_mean,'mi_median': mi_median,'mi_std': mi_std,\
               'bc1_mean': bc1_mean,'bc1_median': bc1_median,'bc1_std': bc1_std,\
               'bc2_mean': bc2_mean,'bc2_median': bc2_median,'bc2_std': bc2_std,\
-              'bc3_mean': bc3_mean,'bc3_median': bc3_median,'bc3_std': bc3_std
+              'bc3_mean': bc3_mean,'bc3_median': bc3_median,'bc3_std': bc3_std,\
+              'bc4_mean': bc4_mean,'bc4_median': bc4_median,'bc4_std': bc4_std,\
+              'bc5_mean': bc5_mean,'bc5_median': bc5_median,'bc5_std': bc5_std
             }
 
-    for band in range(1,13):
+    for band in range(1,14):
         b_dict[f'b{band}_mean'] = img.read(band).flatten().mean()
         b_dict[f'b{band}_median'] = np.median(img.read(band).flatten())
         b_dict[f'b{band}_std'] = np.std(img.read(band).flatten())
 
     X.append(b_dict)
     df = pd.DataFrame(X)
+    df['month'] = pd.DatetimeIndex(df['date']).month
+    df = df.drop(columns = 'date')
 
     return df
 
+
 def predict(image):
-    knn_model = "knn_model.joblib"
-    model = joblib.load(knn_model)
+    # pipeline_model = "pipeline.joblib"
+    # model = joblib.load(pipeline_model)
+    pipeline_test_model = "pipeline_test2.joblib"
+    model = joblib.load(pipeline_test_model)
 
     predictions = model.predict(image)
 
@@ -116,18 +144,75 @@ def get_geo_json(dataset):
             dataset.crs, 'EPSG:4326', geom, precision=6)
     return geom
 
-def display_map(geo_json):
+def display_map(geo_json, img):
     longitude = geo_json['coordinates'][0][0][0]
     latitude = geo_json['coordinates'][0][0][1]
+    maxbox_key ='pk.eyJ1Ijoicm9zaWUyOSIsImEiOiJja3FjeWVnbjkwa3B6MnBsZDBqaWs3NTJlIn0.v16RVOheknmdh9eg5jDYnA'
 
-    m = folium.Map(location=[latitude, longitude], zoom_start=6)
+    z = 15
+
+    tiles = deg2num(latitude,longitude,z)
+
+    x = tiles[0]
+    y = tiles[1]
+
+    m = folium.Map(location=[latitude,longitude],
+    zoom_start= 15,
+    tiles=f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}',
+    attr='XXX Mapbox Attribution')
+
+    print(f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}')
+
+    # m = folium.Map(location=[latitude, longitude], zoom_start= 18, tiles = 'Mapbox', tileurl)
+
     folium.Marker(
         location=[latitude, longitude],
         icon=folium.Icon(color="red", icon="info-sign"),
     ).add_to(m)
 
     folium.GeoJson(geo_json).add_to(m)
+
+    # call to render Folium map in Streamlit
     folium_static(m)
+
+
+
+    # delta=0.05
+    # tl = [lat_lng[0]+delta, lat_lng[1]-delta]
+    # br = [lat_lng[0]-delta, lat_lng[1]+delta]
+    # z = 15 # Set the resolution (max at 15)
+    # tileurl = 'https://api.mapbox.com/v4/mapbox.satellite/3/2/3@2x.png?access_token=' + str(maxbox_key)
+
+    # m = folium.Map(
+    #     location=[latitude,longitude], zoom_start=9, tiles=tileurl, attr='Mapbox')
+
+    # This is probably hugely inefficient, but it works. Opens the COG as a numpy array
+
+    # array = img.read()
+    # bounds = img.bounds
+
+    # x1,y1,x2,y2 = img.bounds
+    # bbox = [(bounds.bottom, bounds.left), (bounds.top, bounds.right)]
+
+    # image_abc= folium.raster_layers.ImageOverlay(
+    # name="Sentinel 2",
+    # image=np.moveaxis(array, 0, -1),
+    # bounds=bbox,
+    # opacity=0.9,
+    # interactive=True,
+    # cross_origin=False,
+    # zindex=1
+    # )
+    # image_abc.add_to(m)
+    # folium.LayerControl().add_to(m)
+
+def deg2num(lat_deg, lon_deg, zoom):
+    lat_rad = math.radians(lat_deg)
+    n = 2.0 ** zoom
+    xtile = int((lon_deg + 180.0) / 360.0 * n)
+    ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+    return (xtile, ytile)
+
 
 if __name__ == "__main__":
     main()
