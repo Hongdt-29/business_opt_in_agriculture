@@ -1,20 +1,23 @@
 import streamlit as st
-# from PIL import Image
 from rasterio.io import MemoryFile
 import rasterio
 import numpy as np
 import pandas as pd
 import joblib
-# import base64
 import math
 
 from streamlit_folium import folium_static
 import folium
-# import os
+
 
 import rasterio.features
 import rasterio.warp
-# from sklearn.preprocessing import RobustScaler1
+
+
+from folium import plugins
+
+from matplotlib.pyplot import imread
+
 
 st.title('Rice and Sugarcane Classifier')
 
@@ -25,13 +28,28 @@ def main():
         with MemoryFile(file_uploaded) as memfile:
             with memfile.open() as img:
                 geo_json = get_geo_json(img)
+                # st.write(geo_json)
                 pre_image = image_preprocessing(img,file_uploaded)
-                st.write(pre_image)
+                # st.write(pre_image)
                 if class_btn:
                     with st.spinner('Model working....'):
                         predictions = predict(pre_image)[0]
                         st.success("Predicted Class: " + predictions)
-                display_map(geo_json,img)
+
+                # st.beta_set_page_config(layout="wide")
+
+                col1, col2 = st.beta_columns(2)
+
+                # original = Image.open(image)
+                col1.header("Location")
+                col1.write(display_map(geo_json), use_column_width=True)
+                col1.image('rice.jpg', use_column_width=True)
+
+                # grayscale = original.convert('LA')
+                col2.header("Satellite Image")
+                col2.image('rice.jpg',use_column_width=True)
+
+
                 img.close()
 
 def image_preprocessing(img,file_uploaded):
@@ -144,26 +162,11 @@ def get_geo_json(dataset):
             dataset.crs, 'EPSG:4326', geom, precision=6)
     return geom
 
-def display_map(geo_json, img):
+def display_map(geo_json):
     longitude = geo_json['coordinates'][0][0][0]
     latitude = geo_json['coordinates'][0][0][1]
-    maxbox_key ='pk.eyJ1Ijoicm9zaWUyOSIsImEiOiJja3FjeWVnbjkwa3B6MnBsZDBqaWs3NTJlIn0.v16RVOheknmdh9eg5jDYnA'
 
-    z = 15
-
-    tiles = deg2num(latitude,longitude,z)
-
-    x = tiles[0]
-    y = tiles[1]
-
-    m = folium.Map(location=[latitude,longitude],
-    zoom_start= 15,
-    tiles=f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}',
-    attr='XXX Mapbox Attribution')
-
-    print(f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}')
-
-    # m = folium.Map(location=[latitude, longitude], zoom_start= 18, tiles = 'Mapbox', tileurl)
+    m = folium.Map(location=[latitude, longitude], zoom_start= 6)
 
     folium.Marker(
         location=[latitude, longitude],
@@ -176,35 +179,21 @@ def display_map(geo_json, img):
     folium_static(m)
 
 
+    # maxbox_key ='pk.eyJ1Ijoicm9zaWUyOSIsImEiOiJja3FjeWVnbjkwa3B6MnBsZDBqaWs3NTJlIn0.v16RVOheknmdh9eg5jDYnA'
 
-    # delta=0.05
-    # tl = [lat_lng[0]+delta, lat_lng[1]-delta]
-    # br = [lat_lng[0]-delta, lat_lng[1]+delta]
-    # z = 15 # Set the resolution (max at 15)
-    # tileurl = 'https://api.mapbox.com/v4/mapbox.satellite/3/2/3@2x.png?access_token=' + str(maxbox_key)
+    # z = 15
 
-    # m = folium.Map(
-    #     location=[latitude,longitude], zoom_start=9, tiles=tileurl, attr='Mapbox')
+    # tiles = deg2num(latitude,longitude,z)
 
-    # This is probably hugely inefficient, but it works. Opens the COG as a numpy array
+    # x = tiles[0]
+    # y = tiles[1]
 
-    # array = img.read()
-    # bounds = img.bounds
+    # m = folium.Map(location=[latitude,longitude],
+    # zoom_start= 15,
+    # tiles=f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}',
+    # attr='XXX Mapbox Attribution')
 
-    # x1,y1,x2,y2 = img.bounds
-    # bbox = [(bounds.bottom, bounds.left), (bounds.top, bounds.right)]
-
-    # image_abc= folium.raster_layers.ImageOverlay(
-    # name="Sentinel 2",
-    # image=np.moveaxis(array, 0, -1),
-    # bounds=bbox,
-    # opacity=0.9,
-    # interactive=True,
-    # cross_origin=False,
-    # zindex=1
-    # )
-    # image_abc.add_to(m)
-    # folium.LayerControl().add_to(m)
+    # print(f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}')
 
 def deg2num(lat_deg, lon_deg, zoom):
     lat_rad = math.radians(lat_deg)
