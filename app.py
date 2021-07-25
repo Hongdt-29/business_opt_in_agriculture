@@ -6,29 +6,59 @@ import pandas as pd
 import joblib
 import math
 import os
+import rasterio.mask
 
 from streamlit_folium import folium_static
 import folium
+import streamlit.components.v1 as components
+import base64
 
-st.set_page_config(layout="wide")
+import rasterio
+import rasterio.features
+import rasterio.warp
+
+st.set_page_config(
+            page_title="Sky Crop",
+            page_icon="🌾",
+            layout="wide") # collapsed
 
 CSS = """
     iframe {
         width: auto;
-        height: 417px;
+        height: 500px;
     }
-    img{
-    object-fit: cover;
-    height: 417px;
+    img {
+        object-fit: cover;
+        height: 500px;
     }
+    .logo-img {
+        object-fit: cover;
+        height: 100px;
+    }
+
     """
+
+
 st.write(f"<style>{CSS}</style>", unsafe_allow_html=True)
 
-st.title('Rice and Sugarcane Classifier')
+title_container = st.beta_container()
+col_1, mid, col_2 = st.beta_columns([1,1,30])
+with title_container:
+    with col_1:
+        st.markdown(
+            f"""
+            <img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Rice.png', "rb").read()).decode()}">
+            """,unsafe_allow_html=True)
+    with col_2:
+        st.markdown(
+            f"""
+            <img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Sugarcane.png', "rb").read()).decode()}">
+            """,unsafe_allow_html=True)
 
+st.title('Rice and Sugarcane Classifier')
 def main():
-    file_uploaded = st.file_uploader("Choose File", type=["tif","_all_bands_"])
-    class_btn = st.button("Classify")
+    file_uploaded = st.file_uploader("", type=["tif"])
+
     if file_uploaded is not None:
         with MemoryFile(file_uploaded) as memfile:
             with memfile.open() as img:
@@ -36,24 +66,27 @@ def main():
                 pre_image = image_preprocessing(img,file_uploaded)
                 # st.write(pre_image)
 
-                if class_btn:
-                    with st.spinner('Model working....'):
-                        predictions = predict(pre_image)[0]
-                        st.success("Predicted Class: " + predictions)
-
                 #Display Location map and satellite mage
                 col1, col2 = st.beta_columns(2)
                 col1.header("Location ")
                 with col1:
                     display_map(geo_json)
-
                 col2.header("Satellite Image")
                 uploadedFileName = file_uploaded.name
                 uploadedFileName = uploadedFileName.replace('.tif','')
                 col2.image(f'raw_data/demo/satellite/{uploadedFileName} (red borders).jpg',use_column_width=True)
 
-                img.close()
+                # Question Face
+                st.markdown("<h1 style='text-align: center; color: white;'>Rice or Sugarcane ? 🤔 </h1>", unsafe_allow_html=True)
 
+                #Predict
+                class_btn = st.button("Classify")
+                if class_btn:
+                    with st.spinner('Model working....'):
+                        predictions = predict(pre_image)[0]
+                        st.success("Predicted Class: " + predictions)
+
+                img.close()
 
 def image_preprocessing(img,file_uploaded):
     X = []
@@ -123,9 +156,9 @@ def image_preprocessing(img,file_uploaded):
               'mi_mean': mi_mean,'mi_median': mi_median,'mi_std': mi_std,\
               'bc1_mean': bc1_mean,'bc1_median': bc1_median,'bc1_std': bc1_std,\
               'bc2_mean': bc2_mean,'bc2_median': bc2_median,'bc2_std': bc2_std,\
-              'bc3_mean': bc3_mean,'bc3_median': bc3_median,'bc3_std': bc3_std,\
-              'bc4_mean': bc4_mean,'bc4_median': bc4_median,'bc4_std': bc4_std,\
-              'bc5_mean': bc5_mean,'bc5_median': bc5_median,'bc5_std': bc5_std
+              'bc3_mean': bc3_mean,'bc3_median': bc3_median,'bc3_std': bc3_std
+              # 'bc4_mean': bc4_mean,'bc4_median': bc4_median,'bc4_std': bc4_std,\
+              # 'bc5_mean': bc5_mean,'bc5_median': bc5_median,'bc5_std': bc5_std
             }
 
     for band in range(1,14):
@@ -144,7 +177,7 @@ def image_preprocessing(img,file_uploaded):
 def predict(image):
     # pipeline_model = "pipeline.joblib"
     # model = joblib.load(pipeline_model)
-    pipeline_test_model = "pipeline_test2.joblib"
+    pipeline_test_model = "pipeline_test4.joblib"
     model = joblib.load(pipeline_test_model)
 
     predictions = model.predict(image)
@@ -180,15 +213,6 @@ def display_map(geo_json):
 
     # call to render Folium map in Streamlit
     folium_static(m)
-
-
-def deg2num(lat_deg, lon_deg, zoom):
-    lat_rad = math.radians(lat_deg)
-    n = 2.0 ** zoom
-    xtile = int((lon_deg + 180.0) / 360.0 * n)
-    ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
-    return (xtile, ytile)
-
 
 if __name__ == "__main__":
     main()
