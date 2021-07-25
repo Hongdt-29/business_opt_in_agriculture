@@ -32,3 +32,4 @@ streamlit
 rasterio
 folium
 streamlit_folium
+scipy

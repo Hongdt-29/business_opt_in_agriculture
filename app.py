@@ -17,6 +17,7 @@ import rasterio
 import rasterio.features
 import rasterio.warp
 
+#Page size config
 st.set_page_config(
             page_title="Sky Crop",
             page_icon="🌾",
@@ -33,7 +34,18 @@ CSS = """
     }
     .logo-img {
         object-fit: cover;
-        height: 100px;
+        height: 300px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .stButton button {
+        font-size: 24px;
+        text-align: center;
+
+    }
+    .e16nr0p30 p {
+        font-size: 24px;
     }
 
     """
@@ -41,21 +53,7 @@ CSS = """
 
 st.write(f"<style>{CSS}</style>", unsafe_allow_html=True)
 
-title_container = st.beta_container()
-col_1, mid, col_2 = st.beta_columns([1,1,30])
-with title_container:
-    with col_1:
-        st.markdown(
-            f"""
-            <img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Rice.png', "rb").read()).decode()}">
-            """,unsafe_allow_html=True)
-    with col_2:
-        st.markdown(
-            f"""
-            <img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Sugarcane.png', "rb").read()).decode()}">
-            """,unsafe_allow_html=True)
-
-st.title('Rice and Sugarcane Classifier')
+st.title('Rice and Sugarcane Classifier 🌾')
 def main():
     file_uploaded = st.file_uploader("", type=["tif"])
 
@@ -68,23 +66,35 @@ def main():
 
                 #Display Location map and satellite mage
                 col1, col2 = st.beta_columns(2)
-                col1.header("Location ")
+                col1.header("Location 📍 ")
                 with col1:
                     display_map(geo_json)
-                col2.header("Satellite Image")
+                col2.header("Satellite Image 🛰️ ")
                 uploadedFileName = file_uploaded.name
                 uploadedFileName = uploadedFileName.replace('.tif','')
                 col2.image(f'raw_data/demo/satellite/{uploadedFileName} (red borders).jpg',use_column_width=True)
 
                 # Question Face
-                st.markdown("<h1 style='text-align: center; color: white;'>Rice or Sugarcane ? 🤔 </h1>", unsafe_allow_html=True)
-
+                st.markdown("<h2 style='text-align: left; color: white;'>Rice or Sugarcane ? 🤔 </h2>", unsafe_allow_html=True)
+                st.text("")
                 #Predict
                 class_btn = st.button("Classify")
                 if class_btn:
                     with st.spinner('Model working....'):
                         predictions = predict(pre_image)[0]
-                        st.success("Predicted Class: " + predictions)
+                        if predictions == 'rice_1y':
+                            st.markdown(f"""<img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Rice.png', "rb").read()).decode()}">
+                                        """,unsafe_allow_html=True)
+                            st.text("")
+                            st.text("")
+                            st.success("Predicted Class: " + predictions)
+                        else:
+                            st.markdown(f"""<img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Sugarcane.png', "rb").read()).decode()}">
+                                        """,unsafe_allow_html=True)
+                            st.text("")
+                            st.text("")
+                            st.success("Predicted Class: " + predictions)
+
 
                 img.close()
 
@@ -177,7 +187,7 @@ def image_preprocessing(img,file_uploaded):
 def predict(image):
     # pipeline_model = "pipeline.joblib"
     # model = joblib.load(pipeline_model)
-    pipeline_test_model = "pipeline_test4.joblib"
+    pipeline_test_model = "pipeline_final95.joblib"
     model = joblib.load(pipeline_test_model)
 
     predictions = model.predict(image)
