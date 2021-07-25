@@ -5,19 +5,24 @@ import numpy as np
 import pandas as pd
 import joblib
 import math
+import os
 
 from streamlit_folium import folium_static
 import folium
 
+st.set_page_config(layout="wide")
 
-import rasterio.features
-import rasterio.warp
-
-
-from folium import plugins
-
-from matplotlib.pyplot import imread
-
+CSS = """
+    iframe {
+        width: auto;
+        height: 417px;
+    }
+    img{
+    object-fit: cover;
+    height: 417px;
+    }
+    """
+st.write(f"<style>{CSS}</style>", unsafe_allow_html=True)
 
 st.title('Rice and Sugarcane Classifier')
 
@@ -28,29 +33,27 @@ def main():
         with MemoryFile(file_uploaded) as memfile:
             with memfile.open() as img:
                 geo_json = get_geo_json(img)
-                # st.write(geo_json)
                 pre_image = image_preprocessing(img,file_uploaded)
                 # st.write(pre_image)
+
                 if class_btn:
                     with st.spinner('Model working....'):
                         predictions = predict(pre_image)[0]
                         st.success("Predicted Class: " + predictions)
 
-                # st.beta_set_page_config(layout="wide")
-
+                #Display Location map and satellite mage
                 col1, col2 = st.beta_columns(2)
+                col1.header("Location ")
+                with col1:
+                    display_map(geo_json)
 
-                # original = Image.open(image)
-                col1.header("Location")
-                col1.write(display_map(geo_json), use_column_width=True)
-                col1.image('rice.jpg', use_column_width=True)
-
-                # grayscale = original.convert('LA')
                 col2.header("Satellite Image")
-                col2.image('rice.jpg',use_column_width=True)
-
+                uploadedFileName = file_uploaded.name
+                uploadedFileName = uploadedFileName.replace('.tif','')
+                col2.image(f'raw_data/demo/satellite/{uploadedFileName} (red borders).jpg',use_column_width=True)
 
                 img.close()
+
 
 def image_preprocessing(img,file_uploaded):
     X = []
@@ -178,22 +181,6 @@ def display_map(geo_json):
     # call to render Folium map in Streamlit
     folium_static(m)
 
-
-    # maxbox_key ='pk.eyJ1Ijoicm9zaWUyOSIsImEiOiJja3FjeWVnbjkwa3B6MnBsZDBqaWs3NTJlIn0.v16RVOheknmdh9eg5jDYnA'
-
-    # z = 15
-
-    # tiles = deg2num(latitude,longitude,z)
-
-    # x = tiles[0]
-    # y = tiles[1]
-
-    # m = folium.Map(location=[latitude,longitude],
-    # zoom_start= 15,
-    # tiles=f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}',
-    # attr='XXX Mapbox Attribution')
-
-    # print(f'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.pngraw?access_token={maxbox_key}')
 
 def deg2num(lat_deg, lon_deg, zoom):
     lat_rad = math.radians(lat_deg)
