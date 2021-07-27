@@ -21,7 +21,7 @@ import rasterio.warp
 st.set_page_config(
             page_title="Sky Crop",
             page_icon="🌾",
-            layout="wide") # collapsed
+            layout="wide")
 
 CSS = """
     iframe {
@@ -81,19 +81,20 @@ def main():
                 class_btn = st.button("Classify")
                 if class_btn:
                     with st.spinner('Model working....'):
-                        predictions = predict(pre_image)[0]
-                        if predictions == 'rice_1y':
+                        prediction = predict(pre_image)[0]
+                        if prediction == 'rice_1y':
+                            prediction = 'Rice'
                             st.markdown(f"""<img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Rice.png', "rb").read()).decode()}">
                                         """,unsafe_allow_html=True)
                             st.text("")
                             st.text("")
-                            st.success("Predicted Class: " + predictions)
+                            st.success("Predicted Class: " + prediction)
                         else:
                             st.markdown(f"""<img class="logo-img" src="data:image/png;base64,{base64.b64encode(open('Sugarcane.png', "rb").read()).decode()}">
                                         """,unsafe_allow_html=True)
                             st.text("")
                             st.text("")
-                            st.success("Predicted Class: " + predictions)
+                            st.success("Predicted Class: " + prediction)
 
 
                 img.close()

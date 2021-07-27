@@ -1,9 +1,0 @@
-
-3 rice fields that our model correctly classifies
-
-id_60a091c6f85c5e001b871494_all_bands_2020-09-22
-
-id_60a094f8f85c5e001b8714b8_all_bands_2020-12-01
-
-id_60a098fbf85c5e001b8714db_all_bands_2021-04-05
-
