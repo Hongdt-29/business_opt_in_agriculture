@@ -53,7 +53,7 @@ CSS = """
 
 st.write(f"<style>{CSS}</style>", unsafe_allow_html=True)
 
-st.title('Rice and Sugarcane Classifier 🌾')
+st.title('SKY CROP  🌾')
 def main():
     file_uploaded = st.file_uploader("", type=["tif"])
 
@@ -75,7 +75,7 @@ def main():
                 col2.image(f'raw_data/demo/satellite/{uploadedFileName} (red borders).jpg',use_column_width=True)
 
                 # Question Face
-                st.markdown("<h2 style='text-align: left; color: white;'>Rice or Sugarcane ? 🤔 </h2>", unsafe_allow_html=True)
+                st.markdown("<h2 style='text-align: left; color: white; font-family: sans-serif;'>Rice or Sugarcane ? 🤔 </h2>", unsafe_allow_html=True)
                 st.text("")
                 #Predict
                 class_btn = st.button("Classify")
