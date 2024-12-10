@@ -19,7 +19,7 @@ import rasterio.warp
 
 #Page size config
 st.set_page_config(
-            page_title="Sky Crop",
+            page_title="Sky Crop ABC",
             page_icon="🌾",
             layout="wide")
 
@@ -53,7 +53,7 @@ CSS = """
 
 st.write(f"<style>{CSS}</style>", unsafe_allow_html=True)
 
-st.title('SKY CROP  🌾')
+st.title('SKY CROP 🌾')
 def main():
     file_uploaded = st.file_uploader("", type=["tif"])
 
@@ -65,14 +65,14 @@ def main():
                 # st.write(pre_image)
 
                 #Display Location map and satellite mage
-                col1, col2 = st.beta_columns(2)
+                col1, col2 = st.columns(2)
                 col1.header("Location 📍 ")
                 with col1:
                     display_map(geo_json)
                 col2.header("Satellite Image 🛰️ ")
                 uploadedFileName = file_uploaded.name
                 uploadedFileName = uploadedFileName.replace('.tif','')
-                col2.image(f'raw_data/demo/satellite/{uploadedFileName} (red borders).jpg',use_column_width=True)
+                col2.image(f'raw_data/demo/satellite/{uploadedFileName} (red borders).jpg',use_container_width=True)
 
                 # Question Face
                 st.markdown("<h2 style='text-align: left; color: white; font-family: sans-serif;'>Rice or Sugarcane ? 🤔 </h2>", unsafe_allow_html=True)
